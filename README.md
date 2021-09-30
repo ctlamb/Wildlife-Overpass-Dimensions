@@ -139,7 +139,7 @@ WNA <- ggRGB(a, r=1, g=2, b=3)+
 
 
 ##Europe
-bb = st_bbox(c(xmin = 2, xmax = 24, ymax = 54, ymin = 43), crs = st_crs(4326))
+bb = st_bbox(c(xmin = 2, xmax = 24, ymax = 58, ymin = 43), crs = st_crs(4326))
 
 bb_ll = st_bbox(
   st_transform(
@@ -148,7 +148,7 @@ bb_ll = st_bbox(
   )
 )
 
-bb_clip=st_bbox(c(xmin = 0.2E6, xmax = 2.2E6, ymin = 4.7E6, ymax = 6.1E6), crs = "+proj=wintri")
+bb_clip=st_bbox(c(xmin = 0.2E6, xmax = 2.2E6, ymin = 4.4E6, ymax = 6.1E6), crs = "+proj=wintri")
 
 a <- basemap_raster(bb_ll)
 a <- a%>%projectRaster(crs="+proj=wintri")%>%
@@ -189,7 +189,7 @@ plot.dat <- op%>%
 plot.dat%>%
   filter(!name%in%"lanes")%>%
   ggplot(aes(y=value))+
-    geom_boxplot(color="grey")+
+    geom_boxplot(fill="grey")+
     facet_wrap(vars(name), scales="free_y")+
   theme_ipsum()+
      theme(axis.title.x = element_text(size=17),
@@ -276,7 +276,7 @@ drop_na(ApproxSize)%>%
   summary
 ```
 
-## PSummary stats
+## Summary stats
 
 ``` r
 plot.dat%>%
@@ -284,16 +284,39 @@ plot.dat%>%
   summarise(mean = mean(value, na.rm = TRUE),
             min = min(value, na.rm = TRUE),
             max = max(value, na.rm = TRUE),
-            n=n())
+            n=n())%>%
+  kable
+```
 
+| name               |       mean |        min |        max |  n |
+| :----------------- | ---------: | ---------: | ---------: | -: |
+| Length (m)         | 78.4512286 | 20.1000000 | 170.000000 | 84 |
+| Width (m)          | 45.4538095 |  6.0000000 | 200.000000 | 84 |
+| Width:length ratio |  0.6734309 |  0.1090909 |   3.076923 | 84 |
+| lanes              |  4.2151899 |  0.0000000 |   9.000000 | 84 |
+
+``` r
 plot.dat%>%
   group_by(Continent, name) %>%
   summarise(mean = mean(value, na.rm = TRUE),
             min = min(value, na.rm = TRUE),
             max = max(value, na.rm = TRUE),
-            n=n())
+            n=n())%>%
+  kable
+```
 
+| Continent                 | name               |       mean |        min |        max |  n |
+| :------------------------ | :----------------- | ---------: | ---------: | ---------: | -: |
+| Europe, Asia, and Oceania | Length (m)         | 83.0000000 | 21.0000000 | 170.000000 | 62 |
+| Europe, Asia, and Oceania | Width (m)          | 47.5193548 | 10.0000000 | 200.000000 | 62 |
+| Europe, Asia, and Oceania | Width:length ratio |  0.6689406 |  0.1269841 |   3.076923 | 62 |
+| Europe, Asia, and Oceania | lanes              |  4.3620690 |  0.0000000 |   9.000000 | 62 |
+| North America             | Length (m)         | 65.6319636 | 20.1000000 | 116.000000 | 22 |
+| North America             | Width (m)          | 39.6327273 |  6.0000000 |  60.000000 | 22 |
+| North America             | Width:length ratio |  0.6860852 |  0.1090909 |   1.517413 | 22 |
+| North America             | lanes              |  3.8095238 |  2.0000000 |   8.000000 | 22 |
 
+``` r
 op%>%
   drop_na(`Year of build_clean`)%>%
   mutate(period=case_when(`Year of build_clean`<2010~"before",
@@ -301,5 +324,11 @@ op%>%
   group_by(period) %>%
   summarise(W = mean(`Width (m)`, na.rm = TRUE),
             L=mean(`Length (m)`),
-            n=n())
+            n=n())%>%
+  kable
 ```
+
+| period |        W |        L |  n |
+| :----- | -------: | -------: | -: |
+| after  | 42.02556 | 66.90444 | 18 |
+| before | 44.08000 | 74.25560 | 22 |

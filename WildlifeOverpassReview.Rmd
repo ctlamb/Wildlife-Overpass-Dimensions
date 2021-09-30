@@ -152,7 +152,7 @@ WNA <- ggRGB(a, r=1, g=2, b=3)+
 
 
 ##Europe
-bb = st_bbox(c(xmin = 2, xmax = 24, ymax = 54.5, ymin = 43), crs = st_crs(4326))
+bb = st_bbox(c(xmin = 2, xmax = 24, ymax = 58, ymin = 43), crs = st_crs(4326))
 
 bb_ll = st_bbox(
   st_transform(
@@ -161,7 +161,7 @@ bb_ll = st_bbox(
   )
 )
 
-bb_clip=st_bbox(c(xmin = 0.2E6, xmax = 2.2E6, ymin = 4.7E6, ymax = 6.15E6), crs = "+proj=wintri")
+bb_clip=st_bbox(c(xmin = 0.2E6, xmax = 2.2E6, ymin = 4.4E6, ymax = 6.1E6), crs = "+proj=wintri")
 
 a <- basemap_raster(bb_ll)
 a <- a%>%projectRaster(crs="+proj=wintri")%>%
@@ -202,7 +202,7 @@ plot.dat <- op%>%
 plot.dat%>%
   filter(!name%in%"lanes")%>%
   ggplot(aes(y=value))+
-    geom_boxplot(color="grey")+
+    geom_boxplot(fill="grey")+
     facet_wrap(vars(name), scales="free_y")+
   theme_ipsum()+
      theme(axis.title.x = element_text(size=17),
