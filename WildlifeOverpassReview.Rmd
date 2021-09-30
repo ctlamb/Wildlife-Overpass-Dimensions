@@ -8,6 +8,10 @@ output: github_document
 
 
 ```{r render, eval=FALSE, message=FALSE, warning=FALSE, include=FALSE, results='hide'}
+# library(credentials)
+# usethis::create_github_token()
+# set_github_pat()
+
 rmarkdown::render(here::here('WildlifeOverpassReview.Rmd'),
                   output_file = "README.md")
 ```
@@ -148,7 +152,7 @@ WNA <- ggRGB(a, r=1, g=2, b=3)+
 
 
 ##Europe
-bb = st_bbox(c(xmin = 2, xmax = 24, ymax = 54, ymin = 43), crs = st_crs(4326))
+bb = st_bbox(c(xmin = 2, xmax = 24, ymax = 54.5, ymin = 43), crs = st_crs(4326))
 
 bb_ll = st_bbox(
   st_transform(
@@ -272,21 +276,23 @@ drop_na(ApproxSize)%>%
 ```
 
 
-## PSummary stats
+## Summary stats
 ```{r stats, fig.height=7, fig.width=7, message=FALSE, warning=FALSE}
 plot.dat%>%
   group_by(name) %>%
   summarise(mean = mean(value, na.rm = TRUE),
             min = min(value, na.rm = TRUE),
             max = max(value, na.rm = TRUE),
-            n=n())
+            n=n())%>%
+  kable
 
 plot.dat%>%
   group_by(Continent, name) %>%
   summarise(mean = mean(value, na.rm = TRUE),
             min = min(value, na.rm = TRUE),
             max = max(value, na.rm = TRUE),
-            n=n())
+            n=n())%>%
+  kable
 
 
 op%>%
@@ -296,5 +302,6 @@ op%>%
   group_by(period) %>%
   summarise(W = mean(`Width (m)`, na.rm = TRUE),
             L=mean(`Length (m)`),
-            n=n())
+            n=n())%>%
+  kable
 ```
