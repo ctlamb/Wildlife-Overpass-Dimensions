@@ -297,5 +297,4 @@ op%>%
   summarise(W = mean(`Width (m)`, na.rm = TRUE),
             L=mean(`Length (m)`),
             n=n())
-
 ```
