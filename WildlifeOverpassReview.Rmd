@@ -161,7 +161,7 @@ bb_ll = st_bbox(
   )
 )
 
-bb_clip=st_bbox(c(xmin = 0.2E6, xmax = 2.2E6, ymin = 4.7E6, ymax = 6.1E6), crs = "+proj=wintri")
+bb_clip=st_bbox(c(xmin = 0.2E6, xmax = 2.2E6, ymin = 4.7E6, ymax = 6.15E6), crs = "+proj=wintri")
 
 a <- basemap_raster(bb_ll)
 a <- a%>%projectRaster(crs="+proj=wintri")%>%
