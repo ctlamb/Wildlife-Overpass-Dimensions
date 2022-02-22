@@ -1,7 +1,7 @@
 Wildlife Overpass Review
 ================
 Clayton Lamb, Liam Brennan, Emily Chow
-30 September, 2021
+21 February, 2022
 
 ## Load Data
 
@@ -24,10 +24,12 @@ library(rworldmap)
 library(RStoolbox)
 library(ggpubr)
 library(cowplot)
+library(tidylog)
 options(scipen=999)
 
 ##load data
-df <- read_xlsx(here::here("data","Crossing Structure Literature Review_Appendix (83_overpasses_only).xlsx"))
+df <- read_xlsx(here::here("data","2022-02-19-Crossing Structure Literature Review Data_Figures.xlsx"))
+eff <- read_xlsx(here::here("data","2022-02-19-Crossing Structure Literature Review Data_Figures.xlsx"), sheet="CL_eff")
 ```
 
 ## Map
@@ -39,7 +41,14 @@ op <- st_as_sf(df%>%mutate(Lat=extract_numeric(Lat),
                coords=c("Long", "Lat"),
                crs=4326)%>%
     mutate(Continent=case_when(Country%in%c("U.S.A", "Canada","U.S.A.")~"North America",
-                             TRUE~"Europe, Asia, and Oceania"))
+                             TRUE~"Europe, Asia, and Oceania"))%>%
+  rename(`Width (m)`=`Estimated inner Width (m) ( from Google Earth)(in cases where fencing is visible - inner fence/rail where visible)`,
+         `Length (m)`=`Estimated Length (m) ( Headwall)(end to end of physical structure, often indicated by start and stop of guard rail / concreate/metail edge of strcuture)`,
+         lanes=`Number of lanes spanned`,
+         year=`Year of build_clean`)%>%
+  mutate(`Length (m)`=as.numeric(`Length (m)`),
+         `Width (m)`=as.numeric(`Width (m)`),
+         lanes=as.numeric(lanes))
 
                
 mapview(op)
@@ -177,12 +186,15 @@ ggsave(here::here("output","map.png"), height=7, width=7, unit="in", bg="white")
 ## Plots
 
 ``` r
+##clean up column names
 plot.dat <- op%>%
   tibble%>%
-  dplyr::select(Continent,`Width (m)`,`Length (m)`, lanes=`Number of lanes spanned`)%>%
-  mutate(`Length (m)`=as.numeric(`Length (m)`),
-         lanes=as.numeric(lanes))%>%
-    mutate(`Width:length ratio`=`Width (m)`/as.numeric(`Length (m)`))%>%
+  dplyr::select(Continent,
+                year,
+                `Width (m)`,
+                `Length (m)`,
+                lanes)%>%
+    mutate(`Width:length ratio`=`Width (m)`/`Length (m)`)%>%
   tidyr::pivot_longer(`Width (m)`:`Width:length ratio`)%>%
   mutate(name=fct_relevel(name,"Length (m)","Width (m)","Width:length ratio", "lanes"))
 
@@ -229,9 +241,10 @@ plot.dat%>%
 ggsave(here::here("output", "op_dims_continent.png"), height=10, width=7, unit="in",bg="white")
 
 
-by.year <- op%>%
-drop_na(`Year of build_clean`)%>%
-  ggplot(aes(y=`Width (m)`, x=`Year of build_clean`))+
+by.year <- plot.dat%>%
+      filter(name%in%"Width (m)")%>%
+drop_na(year)%>%
+  ggplot(aes(y=value, x=`year`))+
   geom_point()+
   theme_ipsum()+
       facet_wrap(vars(Continent))+
@@ -242,9 +255,11 @@ drop_na(`Year of build_clean`)%>%
           plot.subtitle = element_text(size=17),
           legend.position = "none")+
   labs(title="Width through time",y="Width (m)", x="Year built")
-op%>%
-drop_na(`Year of build_clean`)%>%
-  lm(`Width (m)`~`Year of build_clean`+ Continent, data=.)%>%
+
+plot.dat%>%
+      filter(name%in%"Width (m)")%>%
+      drop_na(year)%>%
+  lm(value~year+ Continent, data=.)%>%
   summary
 
 by.size <- op%>%
@@ -290,10 +305,10 @@ plot.dat%>%
 
 | name               |       mean |        min |        max |  n |
 | :----------------- | ---------: | ---------: | ---------: | -: |
-| Length (m)         | 78.4512286 | 20.1000000 | 170.000000 | 84 |
-| Width (m)          | 45.4538095 |  6.0000000 | 200.000000 | 84 |
-| Width:length ratio |  0.6734309 |  0.1090909 |   3.076923 | 84 |
-| lanes              |  4.2151899 |  0.0000000 |   9.000000 | 84 |
+| Length (m)         | 71.0987209 | 23.2200000 | 138.280000 | 92 |
+| Width (m)          | 42.0809412 |  5.6000000 | 122.440000 | 92 |
+| Width:length ratio |  0.6682694 |  0.0886497 |   2.761843 | 92 |
+| lanes              |  4.2151899 |  0.0000000 |   9.000000 | 92 |
 
 ``` r
 plot.dat%>%
@@ -307,28 +322,105 @@ plot.dat%>%
 
 | Continent                 | name               |       mean |        min |        max |  n |
 | :------------------------ | :----------------- | ---------: | ---------: | ---------: | -: |
-| Europe, Asia, and Oceania | Length (m)         | 83.0000000 | 21.0000000 | 170.000000 | 62 |
-| Europe, Asia, and Oceania | Width (m)          | 47.5193548 | 10.0000000 | 200.000000 | 62 |
-| Europe, Asia, and Oceania | Width:length ratio |  0.6689406 |  0.1269841 |   3.076923 | 62 |
-| Europe, Asia, and Oceania | lanes              |  4.3620690 |  0.0000000 |   9.000000 | 62 |
-| North America             | Length (m)         | 65.6319636 | 20.1000000 | 116.000000 | 22 |
-| North America             | Width (m)          | 39.6327273 |  6.0000000 |  60.000000 | 22 |
-| North America             | Width:length ratio |  0.6860852 |  0.1090909 |   1.517413 | 22 |
-| North America             | lanes              |  3.8095238 |  2.0000000 |   8.000000 | 22 |
+| Europe, Asia, and Oceania | Length (m)         | 74.0752381 | 23.2200000 | 138.280000 | 65 |
+| Europe, Asia, and Oceania | Width (m)          | 46.0780645 | 10.6400000 | 122.440000 | 65 |
+| Europe, Asia, and Oceania | Width:length ratio |  0.7218264 |  0.1354706 |   2.761843 | 65 |
+| Europe, Asia, and Oceania | lanes              |  4.3620690 |  0.0000000 |   9.000000 | 65 |
+| North America             | Length (m)         | 62.9456522 | 34.1500000 | 109.290000 | 27 |
+| North America             | Width (m)          | 31.3060870 |  5.6000000 |  60.070000 | 27 |
+| North America             | Width:length ratio |  0.5238982 |  0.0886497 |   1.101943 | 27 |
+| North America             | lanes              |  3.8095238 |  2.0000000 |   8.000000 | 27 |
 
 ``` r
 op%>%
-  drop_na(`Year of build_clean`)%>%
-  mutate(period=case_when(`Year of build_clean`<2010~"before",
-                          `Year of build_clean`>=2010~"after"))%>%
+  drop_na(year)%>%
+  mutate(period=case_when(year<2010~"before",
+                          year>=2010~"after"))%>%
   group_by(period) %>%
   summarise(W = mean(`Width (m)`, na.rm = TRUE),
-            L=mean(`Length (m)`),
+            L=mean(`Length (m)`, na.rm = TRUE),
             n=n())%>%
   kable
 ```
 
 | period |        W |        L |  n |
 | :----- | -------: | -------: | -: |
-| after  | 42.02556 | 66.90444 | 18 |
-| before | 44.08000 | 74.25560 | 22 |
+| after  | 41.04158 | 62.73421 | 21 |
+| before | 43.29647 | 65.90222 | 19 |
+
+## Effectiveness
+
+``` r
+eff <- eff%>%
+    rename(`Width (m)`=`Estimated inner Width (m) ( from Google Earth)(in cases where fencing is visible - inner fence/rail where visible)`,
+         `Length (m)`=`Estimated Length (m) ( Headwall)(end to end of physical structure, often indicated by start and stop of guard rail / concreate/metail edge of strcuture)`,
+         `W:L ratio`=`W:L ratio GE`)%>%
+  mutate(`Length (m)`=as.numeric(`Length (m)`),
+         `Width (m)`=as.numeric(`Width (m)`))
+  
+eff%>%
+  dplyr::select(`Name (if applicable)`, Total, `Width (m)`,`W:L ratio`)%>%
+  pivot_longer(`Width (m)`:`W:L ratio`)%>%
+  ggplot(aes(y=Total, x=value, fill=name))+
+    geom_point()+
+    facet_wrap(vars(name), scales="free_x")+
+  theme_ipsum()+
+  geom_smooth(method="lm",se=FALSE)+
+     theme(axis.title.x = element_text(size=17),
+          axis.title.y = element_text(size=17),
+          axis.text.x = element_text(size=17),
+          axis.text.y = element_text(size=13),
+          plot.title = element_text(size=22),
+          plot.subtitle = element_text(size=17),
+          legend.position = "none")+
+  labs(title="Overpass dimensions",y="",x="")
+```
+
+![](README_files/figure-gfm/Effectiveness-1.png)<!-- -->
+
+``` r
+ggsave(here::here("output", "op_dims_effectiveness.png"), height=5, width=7, unit="in",bg="white")
+
+library(tidymodels)
+eff%>%
+  dplyr::select(`Name (if applicable)`, Total, `Width (m)`,`W:L ratio`)%>%
+  pivot_longer(`Width (m)`:`W:L ratio`)%>%
+  nest(data = c(-name))%>% 
+  mutate(
+    fit = map(data, ~ lm(Total ~ value, data = .x)),
+    tidied = map(fit, tidy)
+  ) %>% 
+  unnest(tidied) %>% 
+  dplyr::select(-data, -fit)%>%
+  filter(term=="value")%>%
+  mutate_if(is.numeric, round, 5)
+
+eff%>%
+  dplyr::select(`Name (if applicable)`, Total, `Width (m)`=`Known Width (m)`,`W:L ratio`=`W:L ratio known values`)%>%
+  pivot_longer(`Width (m)`:`W:L ratio`)%>%
+  nest(data = c(-name))%>% 
+  mutate(
+    fit = map(data, ~ lm(Total ~ value, data = .x)),
+    tidied = map(fit, tidy)
+  ) %>% 
+  unnest(tidied) %>% 
+  dplyr::select(-data, -fit)%>%
+  filter(term=="value")%>%
+  mutate_if(is.numeric, round, 5)
+
+
+eff%>%
+  mutate(`Width (m)`=case_when(is.na(`Width (m)`)~`Known Width (m)`, TRUE~`Width (m)`),
+         `W:L ratio`=case_when(is.na(`W:L ratio`)~`W:L ratio known values`, TRUE~`W:L ratio`))%>%
+  dplyr::select(`Name (if applicable)`, Total, `Width (m)`,`W:L ratio`)%>%
+  pivot_longer(`Width (m)`:`W:L ratio`)%>%
+  nest(data = c(-name))%>% 
+  mutate(
+    fit = map(data, ~ lm(Total ~ value, data = .x)),
+    tidied = map(fit, tidy)
+  ) %>% 
+  unnest(tidied) %>% 
+  dplyr::select(-data, -fit)%>%
+  filter(term=="value")%>%
+  mutate_if(is.numeric, round, 5)
+```
