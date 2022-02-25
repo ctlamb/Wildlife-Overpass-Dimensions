@@ -1,7 +1,7 @@
 Wildlife Overpass Review
 ================
 Clayton Lamb, Liam Brennan, Emily Chow
-21 February, 2022
+25 February, 2022
 
 ## Load Data
 
@@ -393,8 +393,32 @@ eff%>%
   unnest(tidied) %>% 
   dplyr::select(-data, -fit)%>%
   filter(term=="value")%>%
-  mutate_if(is.numeric, round, 5)
+  mutate_if(is.numeric, round, 5)%>%
+  kable
+```
 
+| name      | term  | estimate | std.error | statistic | p.value |
+| :-------- | :---- | -------: | --------: | --------: | ------: |
+| Width (m) | value |  0.01856 |   0.01599 |   1.16083 | 0.28376 |
+| W:L ratio | value |  0.92027 |   1.23944 |   0.74249 | 0.48195 |
+
+``` r
+eff%>%
+  dplyr::select(`Name (if applicable)`, Total, `Width (m)`)%>%
+  mutate(width.bin=case_when(`Width (m)`<=40~"<=40",
+                             `Width (m)`>40~">40"))%>%
+  drop_na(width.bin)%>%
+   lm(Total ~ width.bin, data=.)%>%
+  tidy%>%
+  kable
+```
+
+| term          |  estimate | std.error | statistic |   p.value |
+| :------------ | --------: | --------: | --------: | --------: |
+| (Intercept)   | 0.3556911 | 0.6120751 | 0.5811232 | 0.5793793 |
+| width.bin\>40 | 1.1295341 | 0.7496359 | 1.5067770 | 0.1755946 |
+
+``` r
 eff%>%
   dplyr::select(`Name (if applicable)`, Total, `Width (m)`=`Known Width (m)`,`W:L ratio`=`W:L ratio known values`)%>%
   pivot_longer(`Width (m)`:`W:L ratio`)%>%
@@ -406,9 +430,16 @@ eff%>%
   unnest(tidied) %>% 
   dplyr::select(-data, -fit)%>%
   filter(term=="value")%>%
-  mutate_if(is.numeric, round, 5)
+  mutate_if(is.numeric, round, 5)%>%
+  kable
+```
 
+| name      | term  | estimate | std.error | statistic | p.value |
+| :-------- | :---- | -------: | --------: | --------: | ------: |
+| Width (m) | value |  0.01408 |   0.01345 |   1.04663 | 0.31991 |
+| W:L ratio | value |  0.78261 |   0.86895 |   0.90064 | 0.38896 |
 
+``` r
 eff%>%
   mutate(`Width (m)`=case_when(is.na(`Width (m)`)~`Known Width (m)`, TRUE~`Width (m)`),
          `W:L ratio`=case_when(is.na(`W:L ratio`)~`W:L ratio known values`, TRUE~`W:L ratio`))%>%
@@ -422,5 +453,11 @@ eff%>%
   unnest(tidied) %>% 
   dplyr::select(-data, -fit)%>%
   filter(term=="value")%>%
-  mutate_if(is.numeric, round, 5)
+  mutate_if(is.numeric, round, 5)%>%
+  kable
 ```
+
+| name      | term  | estimate | std.error | statistic | p.value |
+| :-------- | :---- | -------: | --------: | --------: | ------: |
+| Width (m) | value |  0.01340 |   0.01366 |   0.98089 | 0.34978 |
+| W:L ratio | value |  0.90166 |   1.00662 |   0.89573 | 0.39145 |

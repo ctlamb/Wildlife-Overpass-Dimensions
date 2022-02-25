@@ -359,7 +359,18 @@ eff%>%
   unnest(tidied) %>% 
   dplyr::select(-data, -fit)%>%
   filter(term=="value")%>%
-  mutate_if(is.numeric, round, 5)
+  mutate_if(is.numeric, round, 5)%>%
+  kable
+
+eff%>%
+  dplyr::select(`Name (if applicable)`, Total, `Width (m)`)%>%
+  mutate(width.bin=case_when(`Width (m)`<=40~"<=40",
+                             `Width (m)`>40~">40"))%>%
+  drop_na(width.bin)%>%
+   lm(Total ~ width.bin, data=.)%>%
+  tidy%>%
+  kable
+
 
 eff%>%
   dplyr::select(`Name (if applicable)`, Total, `Width (m)`=`Known Width (m)`,`W:L ratio`=`W:L ratio known values`)%>%
@@ -372,7 +383,10 @@ eff%>%
   unnest(tidied) %>% 
   dplyr::select(-data, -fit)%>%
   filter(term=="value")%>%
-  mutate_if(is.numeric, round, 5)
+  mutate_if(is.numeric, round, 5)%>%
+  kable
+
+  
 
 
 eff%>%
@@ -388,6 +402,7 @@ eff%>%
   unnest(tidied) %>% 
   dplyr::select(-data, -fit)%>%
   filter(term=="value")%>%
-  mutate_if(is.numeric, round, 5)
+  mutate_if(is.numeric, round, 5)%>%
+  kable
 
 ```
