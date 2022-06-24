@@ -364,6 +364,7 @@ eff <- eff.raw%>%
          `Width (m)`=as.numeric(`Width (m)`),
          `W:L ratio`=`Width (m)`/`Length (m)`)%>%
   dplyr::select(crossing=name_if_applicable,`Width (m)`,`W:L ratio`,days=approximate_number_of_monitoring_days, total:coyote)%>%
+  dplyr::select(-big_horned_sheep)%>% ##not enough structures near sheep range to test
   pivot_longer(total:coyote)%>%
   mutate(rate=(value/days)*30,
          name=str_replace_all(name,"_"," "))
@@ -374,10 +375,10 @@ eff%>%
   dplyr::select(crossing, rate, `Width (m)`,`W:L ratio`)%>%
   pivot_longer(`Width (m)`:`W:L ratio`)%>%
   ggplot(aes(y=rate, x=value, fill=name))+
-    geom_point()+
     facet_wrap(vars(name), scales="free_x")+
   theme_ipsum()+
   geom_smooth(method="lm",se=FALSE, color="black", linetype="dashed")+
+        geom_point(alpha=0.5)+
      theme(axis.title.x = element_text(size=17),
           axis.title.y = element_text(size=17),
           axis.text.x = element_text(size=17),
@@ -429,10 +430,10 @@ eff%>%
   kable
 ```
 
-| term          | estimate | std.error | statistic |   p.value |
-|:--------------|---------:|----------:|----------:|----------:|
-| (Intercept)   | 4.243902 |  3.155719 |  1.344829 | 0.1814219 |
-| width.bin\>40 | 6.111783 |  3.926233 |  1.556653 | 0.1223996 |
+| term          | estimate | std.error | statistic |  p.value |
+|:--------------|---------:|----------:|----------:|---------:|
+| (Intercept)   | 4.505227 |  3.520520 |  1.279705 | 0.203610 |
+| width.bin\>40 | 6.777833 |  4.343797 |  1.560348 | 0.121837 |
 
 ``` r
 eff%>%
@@ -450,10 +451,10 @@ eff%>%
   filter(!name%in%"total")%>%
   dplyr::select(crossing, rate, `Width (m)`,name)%>%
   ggplot(aes(y=rate, x=`Width (m)`, fill=name))+
-    geom_point()+
     facet_wrap(vars(name), scales="free_y")+
   theme_ipsum()+
   geom_smooth(method="lm",se=FALSE, color="black", linetype="dashed")+
+      geom_point(alpha=0.5)+
      theme(axis.title.x = element_text(size=17),
           axis.title.y = element_text(size=17),
           axis.text.x = element_text(size=17),
@@ -461,7 +462,7 @@ eff%>%
           plot.title = element_text(size=22),
           plot.subtitle = element_text(size=17),
           legend.position = "none")+
-  labs(title="Overpass dimensions",y="Crossings per day",x="")
+  labs(title="Overpass dimensions",y="Crossings per month",x="")
 ```
 
 ![](README_files/figure-gfm/Effectiveness-2.png)<!-- -->
@@ -486,17 +487,16 @@ eff%>%
   kable
 ```
 
-| name             | term        | estimate | std.error | statistic | p.value |
-|:-----------------|:------------|---------:|----------:|----------:|--------:|
-| deer             | `Width (m)` |  0.37978 |   0.40036 |   0.94860 | 0.36518 |
-| elk              | `Width (m)` |  0.06638 |   0.12768 |   0.51993 | 0.61443 |
-| moose            | `Width (m)` |  0.00233 |   0.00578 |   0.40237 | 0.69680 |
-| black bear       | `Width (m)` |  0.00666 |   0.00274 |   2.43047 | 0.03542 |
-| grizzly bear     | `Width (m)` |  0.02548 |   0.00863 |   2.95242 | 0.01836 |
-| cougar           | `Width (m)` | -0.02208 |   0.01655 |  -1.33423 | 0.21172 |
-| big horned sheep | `Width (m)` | -0.06020 |   0.04808 |  -1.25220 | 0.24586 |
-| wolf             | `Width (m)` |  0.01280 |   0.01918 |   0.66735 | 0.52333 |
-| coyote           | `Width (m)` |  0.00560 |   0.02962 |   0.18894 | 0.85392 |
+| name         | term        | estimate | std.error | statistic | p.value |
+|:-------------|:------------|---------:|----------:|----------:|--------:|
+| deer         | `Width (m)` |  0.37978 |   0.40036 |   0.94860 | 0.36518 |
+| elk          | `Width (m)` |  0.06638 |   0.12768 |   0.51993 | 0.61443 |
+| moose        | `Width (m)` |  0.00233 |   0.00578 |   0.40237 | 0.69680 |
+| black bear   | `Width (m)` |  0.00666 |   0.00274 |   2.43047 | 0.03542 |
+| grizzly bear | `Width (m)` |  0.02514 |   0.01014 |   2.48024 | 0.04220 |
+| cougar       | `Width (m)` | -0.02208 |   0.01655 |  -1.33423 | 0.21172 |
+| wolf         | `Width (m)` |  0.01280 |   0.01918 |   0.66735 | 0.52333 |
+| coyote       | `Width (m)` |  0.00560 |   0.02962 |   0.18894 | 0.85392 |
 
 ``` r
 ##summarise  across lengths
@@ -518,17 +518,16 @@ eff%>%
   kable
 ```
 
-| name             | term          | estimate | std.error | statistic | p.value |
-|:-----------------|:--------------|---------:|----------:|----------:|--------:|
-| deer             | width.bin\>40 | 21.93395 |  19.13549 |   1.14624 | 0.27838 |
-| elk              | width.bin\>40 |  5.42005 |   6.06313 |   0.89394 | 0.39236 |
-| moose            | width.bin\>40 |  0.15712 |   0.28483 |   0.55163 | 0.59463 |
-| black bear       | width.bin\>40 |  0.30255 |   0.13845 |   2.18527 | 0.05376 |
-| grizzly bear     | width.bin\>40 |  1.37041 |   0.38717 |   3.53958 | 0.00762 |
-| cougar           | width.bin\>40 | -1.07488 |   0.80592 |  -1.33373 | 0.21187 |
-| big horned sheep | width.bin\>40 | -3.01829 |   2.38617 |  -1.26491 | 0.24150 |
-| wolf             | width.bin\>40 |  0.92302 |   0.92354 |   0.99944 | 0.34685 |
-| coyote           | width.bin\>40 |  0.79029 |   1.42315 |   0.55531 | 0.59089 |
+| name         | term          | estimate | std.error | statistic | p.value |
+|:-------------|:--------------|---------:|----------:|----------:|--------:|
+| deer         | width.bin\>40 | 21.93395 |  19.13549 |   1.14624 | 0.27838 |
+| elk          | width.bin\>40 |  5.42005 |   6.06313 |   0.89394 | 0.39236 |
+| moose        | width.bin\>40 |  0.15712 |   0.28483 |   0.55163 | 0.59463 |
+| black bear   | width.bin\>40 |  0.30255 |   0.13845 |   2.18527 | 0.05376 |
+| grizzly bear | width.bin\>40 |  1.37041 |   0.45340 |   3.02249 | 0.01932 |
+| cougar       | width.bin\>40 | -1.07488 |   0.80592 |  -1.33373 | 0.21187 |
+| wolf         | width.bin\>40 |  0.92302 |   0.92354 |   0.99944 | 0.34685 |
+| coyote       | width.bin\>40 |  0.79029 |   1.42315 |   0.55531 | 0.59089 |
 
 ``` r
 ##Width:length
@@ -547,14 +546,13 @@ eff%>%
   kable
 ```
 
-| name             | term        | estimate | std.error | statistic | p.value |
-|:-----------------|:------------|---------:|----------:|----------:|--------:|
-| deer             | `W:L ratio` | 38.80397 |  27.27650 |   1.42262 | 0.18528 |
-| elk              | `W:L ratio` | -1.81429 |   9.24103 |  -0.19633 | 0.84828 |
-| moose            | `W:L ratio` |  0.13985 |   0.41634 |   0.33589 | 0.74465 |
-| black bear       | `W:L ratio` |  0.52422 |   0.18352 |   2.85653 | 0.01706 |
-| grizzly bear     | `W:L ratio` |  2.01881 |   0.54434 |   3.70875 | 0.00597 |
-| cougar           | `W:L ratio` | -1.19641 |   1.22837 |  -0.97398 | 0.35304 |
-| big horned sheep | `W:L ratio` | -3.72162 |   3.54701 |  -1.04923 | 0.32473 |
-| wolf             | `W:L ratio` |  1.46147 |   1.32013 |   1.10706 | 0.30044 |
-| coyote           | `W:L ratio` | -1.02972 |   2.09817 |  -0.49077 | 0.63418 |
+| name         | term        | estimate | std.error | statistic | p.value |
+|:-------------|:------------|---------:|----------:|----------:|--------:|
+| deer         | `W:L ratio` | 38.80397 |  27.27650 |   1.42262 | 0.18528 |
+| elk          | `W:L ratio` | -1.81429 |   9.24103 |  -0.19633 | 0.84828 |
+| moose        | `W:L ratio` |  0.13985 |   0.41634 |   0.33589 | 0.74465 |
+| black bear   | `W:L ratio` |  0.52422 |   0.18352 |   2.85653 | 0.01706 |
+| grizzly bear | `W:L ratio` |  2.09944 |   0.65517 |   3.20442 | 0.01497 |
+| cougar       | `W:L ratio` | -1.19641 |   1.22837 |  -0.97398 | 0.35304 |
+| wolf         | `W:L ratio` |  1.46147 |   1.32013 |   1.10706 | 0.30044 |
+| coyote       | `W:L ratio` | -1.02972 |   2.09817 |  -0.49077 | 0.63418 |

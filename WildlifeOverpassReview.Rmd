@@ -332,6 +332,7 @@ eff <- eff.raw%>%
          `Width (m)`=as.numeric(`Width (m)`),
          `W:L ratio`=`Width (m)`/`Length (m)`)%>%
   dplyr::select(crossing=name_if_applicable,`Width (m)`,`W:L ratio`,days=approximate_number_of_monitoring_days, total:coyote)%>%
+  dplyr::select(-big_horned_sheep)%>% ##not enough structures near sheep range to test
   pivot_longer(total:coyote)%>%
   mutate(rate=(value/days)*30,
          name=str_replace_all(name,"_"," "))
@@ -342,10 +343,10 @@ eff%>%
   dplyr::select(crossing, rate, `Width (m)`,`W:L ratio`)%>%
   pivot_longer(`Width (m)`:`W:L ratio`)%>%
   ggplot(aes(y=rate, x=value, fill=name))+
-    geom_point()+
     facet_wrap(vars(name), scales="free_x")+
   theme_ipsum()+
   geom_smooth(method="lm",se=FALSE, color="black", linetype="dashed")+
+        geom_point(alpha=0.5)+
      theme(axis.title.x = element_text(size=17),
           axis.title.y = element_text(size=17),
           axis.text.x = element_text(size=17),
@@ -399,10 +400,10 @@ eff%>%
   filter(!name%in%"total")%>%
   dplyr::select(crossing, rate, `Width (m)`,name)%>%
   ggplot(aes(y=rate, x=`Width (m)`, fill=name))+
-    geom_point()+
     facet_wrap(vars(name), scales="free_y")+
   theme_ipsum()+
   geom_smooth(method="lm",se=FALSE, color="black", linetype="dashed")+
+      geom_point(alpha=0.5)+
      theme(axis.title.x = element_text(size=17),
           axis.title.y = element_text(size=17),
           axis.text.x = element_text(size=17),
@@ -410,7 +411,7 @@ eff%>%
           plot.title = element_text(size=22),
           plot.subtitle = element_text(size=17),
           legend.position = "none")+
-  labs(title="Overpass dimensions",y="Crossings per day",x="")
+  labs(title="Overpass dimensions",y="Crossings per month",x="")
 
 ggsave(here::here("output", "op_dims_effectiveness_byspecies.png"), height=8, width=10, unit="in",bg="white")
 
