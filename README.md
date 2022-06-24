@@ -1,7 +1,7 @@
 Wildlife Overpass Review
 ================
 Clayton Lamb, Liam Brennan, Emily Chow
-25 February, 2022
+23 June, 2022
 
 ## Load Data
 
@@ -25,29 +25,31 @@ library(RStoolbox)
 library(ggpubr)
 library(cowplot)
 library(tidylog)
+library(janitor)
+library(tidymodels)
 options(scipen=999)
 
 ##load data
-df <- read_xlsx(here::here("data","2022-02-19-Crossing Structure Literature Review Data_Figures.xlsx"))
-eff <- read_xlsx(here::here("data","2022-02-19-Crossing Structure Literature Review Data_Figures.xlsx"), sheet="CL_eff")
+df <- read_xlsx(here::here("data","2022-06-23-Clean-Crossing Structure Literature Review Data_Figures.xlsx"),sheet="1-Global (fill this first)")%>%clean_names()
+eff.raw <- read_xlsx(here::here("data","2022-06-23-Clean-Crossing Structure Literature Review Data_Figures.xlsx"), sheet="CL_eff")%>%clean_names()
 ```
 
 ## Map
 
 ``` r
 ##make spatial, keep last check
-op <- st_as_sf(df%>%mutate(Lat=extract_numeric(Lat),
-                                                Long=extract_numeric(Long)),
-               coords=c("Long", "Lat"),
+op <- st_as_sf(df%>%mutate(lat=extract_numeric(lat),
+                                                long=extract_numeric(long)),
+               coords=c("long", "lat"),
                crs=4326)%>%
-    mutate(Continent=case_when(Country%in%c("U.S.A", "Canada","U.S.A.")~"North America",
+    mutate(continent=case_when(country%in%c("U.S.A", "Canada","U.S.A.")~"North America",
                              TRUE~"Europe, Asia, and Oceania"))%>%
-  rename(`Width (m)`=`Estimated inner Width (m) ( from Google Earth)(in cases where fencing is visible - inner fence/rail where visible)`,
-         `Length (m)`=`Estimated Length (m) ( Headwall)(end to end of physical structure, often indicated by start and stop of guard rail / concreate/metail edge of strcuture)`,
-         lanes=`Number of lanes spanned`,
-         year=`Year of build_clean`)%>%
-  mutate(`Length (m)`=as.numeric(`Length (m)`),
-         `Width (m)`=as.numeric(`Width (m)`),
+  rename(width=estimated_inner_width_m_from_google_earth_in_cases_where_fencing_is_visible_inner_fence_rail_where_visible,
+         length=estimated_length_m_headwall_end_to_end_of_physical_structure_often_indicated_by_start_and_stop_of_guard_rail_concreate_metail_edge_of_strcuture,
+         lanes=number_of_lanes_spanned,
+         year=year_of_build_clean)%>%
+  mutate(length=as.numeric(length),
+         width=as.numeric(width),
          lanes=as.numeric(lanes))
 
                
@@ -91,9 +93,12 @@ ggplot() +
 ![](README_files/figure-gfm/map-1.png)<!-- -->
 
 ``` r
+ggsave(here::here("output","world_map.png"), height=4, width=7, unit="in", bg="white")
+
+
 #prep basemap
-register_google("xAIzaSyCOwGx2D77XOqRgGhKmcb5F4Kt_S61tCLIx")
-set_defaults(map_service = "osm", map_type = "terrain_bg")
+register_google("AIzaSyCOwGx2D77XOqRgGhKmcb5F4Kt_S61tCLI")
+#set_defaults(map_service = "osm", map_type = "terrain_bg")
 
 ##GLOBAL
 bb = st_bbox(c(xmin = -185, xmax = 185, ymax = 85, ymin = -85), crs = st_crs(4326))
@@ -104,7 +109,8 @@ bb_ll = st_bbox(
     3857
   )
 )
-a <- basemap_raster(bb_ll)
+
+a <- basemap_raster(bb_ll, map_type = "terrain_bg")
 
 a <- a%>%projectRaster(crs="+proj=wintri")
 writeRaster(a,here::here("data","basemap.tif"), overwrite=TRUE)
@@ -132,7 +138,7 @@ bb_ll = st_bbox(
 
 bb_clip=st_bbox(c(xmin = -12.5E6, xmax = -10.3E6, ymin = 3.4E6, ymax = 6.4E6), crs = "+proj=wintri")
 
-a <- basemap_raster(bb_ll)
+a <- basemap_raster(bb_ll, map_type = "terrain_bg")
 a <- a%>%projectRaster(crs="+proj=wintri")%>%
   raster::crop(bb_clip%>%extent)
 writeRaster(a,here::here("data","basemap.tif"), overwrite=TRUE)
@@ -140,7 +146,7 @@ a <- brick(here::here("data","basemap.tif"))%>%
   mask(wintri_outline)
 
 WNA <- ggRGB(a, r=1, g=2, b=3)+
-  geom_sf(data=op%>%filter(Continent=="North America")%>%st_transform_proj(crs = "+proj=wintri")%>%st_intersection(bb_clip%>%st_as_sfc),
+  geom_sf(data=op%>%filter(continent=="North America")%>%st_transform_proj(crs = "+proj=wintri")%>%st_intersection(bb_clip%>%st_as_sfc),
           size = 5/.pt, color="red")+
   coord_sf(datum = "+proj=wintri")+
   theme_map()
@@ -152,14 +158,14 @@ bb = st_bbox(c(xmin = 2, xmax = 24, ymax = 58, ymin = 43), crs = st_crs(4326))
 
 bb_ll = st_bbox(
   st_transform(
-    st_as_sfc(bb), 
+    st_as_sfc(bb),
     3857
   )
 )
 
 bb_clip=st_bbox(c(xmin = 0.2E6, xmax = 2.2E6, ymin = 4.4E6, ymax = 6.1E6), crs = "+proj=wintri")
 
-a <- basemap_raster(bb_ll)
+a <- basemap_raster(bb_ll, map_type = "terrain_bg")
 a <- a%>%projectRaster(crs="+proj=wintri")%>%
   raster::crop(bb_clip%>%extent)
 writeRaster(a,here::here("data","basemap.tif"), overwrite=TRUE)
@@ -167,12 +173,11 @@ a <- brick(here::here("data","basemap.tif"))%>%
   mask(wintri_outline)
 
 EU <- ggRGB(a, r=1, g=2, b=3)+
-  geom_sf(data=op%>%filter(Continent!="North America")%>%st_transform_proj(crs = "+proj=wintri")%>%st_intersection(bb_clip%>%st_as_sfc),
+  geom_sf(data=op%>%filter(continent!="North America")%>%st_transform_proj(crs = "+proj=wintri")%>%st_intersection(bb_clip%>%st_as_sfc),
           size = 5/.pt, color="red")+
   coord_sf(datum = "+proj=wintri")+
   theme_map()
 
-mapview(op%>%filter(Continent!="North America")%>%st_transform_proj(crs = "+proj=wintri")%>%st_intersection(bb_clip%>%st_as_sfc))+mapview(bb_clip)
 
 plot_grid(world,plot_grid(WNA, EU, labels = c("B","C"), rel_widths = c(1, 1.9)), labels = c("A",NA),nrow=2, rel_heights = c(1.9,1))
 ```
@@ -189,10 +194,10 @@ ggsave(here::here("output","map.png"), height=7, width=7, unit="in", bg="white")
 ##clean up column names
 plot.dat <- op%>%
   tibble%>%
-  dplyr::select(Continent,
+  dplyr::select(continent,
                 year,
-                `Width (m)`,
-                `Length (m)`,
+                `Width (m)`=width,
+                `Length (m)`=length,
                 lanes)%>%
     mutate(`Width:length ratio`=`Width (m)`/`Length (m)`)%>%
   tidyr::pivot_longer(`Width (m)`:`Width:length ratio`)%>%
@@ -223,7 +228,7 @@ plot.dat%>%
     filter(!name%in%"lanes")%>%
   ggplot(aes(y=value, fill=name))+
     geom_boxplot()+
-    facet_grid(name~Continent, scales="free_y")+
+    facet_grid(name~continent, scales="free_y")+
   theme_ipsum()+
      theme(axis.title.x = element_text(size=17),
           axis.title.y = element_text(size=17),
@@ -247,7 +252,7 @@ drop_na(year)%>%
   ggplot(aes(y=value, x=`year`))+
   geom_point()+
   theme_ipsum()+
-      facet_wrap(vars(Continent))+
+      facet_wrap(vars(continent))+
      theme(axis.title.x = element_text(size=17),
           axis.title.y = element_text(size=17),
           axis.text = element_text(size=13),
@@ -259,13 +264,13 @@ drop_na(year)%>%
 plot.dat%>%
       filter(name%in%"Width (m)")%>%
       drop_na(year)%>%
-  lm(value~year+ Continent, data=.)%>%
+  lm(value~year+ continent, data=.)%>%
   summary
 
 by.size <- op%>%
-drop_na(ApproxSize)%>%
-  mutate(ApproxSize=fct_relevel(ApproxSize,"Small (<50 lbs)","Medium (50-350 lbs)","Large (>350 lbs)"))%>%
-  ggplot(aes(y=`Width (m)`, x=ApproxSize))+
+drop_na(approx_size)%>%
+  mutate(approx_size=fct_relevel(approx_size,"Small (<50 lbs)","Medium (50-350 lbs)","Large (>350 lbs)"))%>%
+  ggplot(aes(y=width, x=approx_size))+
     geom_boxplot(fill="grey")+
   theme_ipsum()+
      theme(axis.title.x = element_text(size=17),
@@ -285,9 +290,9 @@ ggarrange(by.size,by.year, labels="AUTO", ncol=1)
 ggsave(here::here("output", "op_dims_bodysize_year.png"), height=10, width=7, unit="in",bg="white")
 
 op%>%
-drop_na(ApproxSize)%>%
-  mutate(ApproxSize=fct_relevel(ApproxSize,"Small (<50 lbs)","Medium (50-350 lbs)","Large (>350 lbs)"))%>%
-  lm(`Width (m)`~`ApproxSize`, data=.)%>%
+drop_na(approx_size)%>%
+  mutate(approx_size=fct_relevel(approx_size,"Small (<50 lbs)","Medium (50-350 lbs)","Large (>350 lbs)"))%>%
+  lm(width~approx_size, data=.)%>%
   summary
 ```
 
@@ -303,16 +308,16 @@ plot.dat%>%
   kable
 ```
 
-| name               |       mean |        min |        max |  n |
-| :----------------- | ---------: | ---------: | ---------: | -: |
-| Length (m)         | 71.0987209 | 23.2200000 | 138.280000 | 92 |
-| Width (m)          | 42.0809412 |  5.6000000 | 122.440000 | 92 |
-| Width:length ratio |  0.6682694 |  0.0886497 |   2.761843 | 92 |
-| lanes              |  4.2151899 |  0.0000000 |   9.000000 | 92 |
+| name               |       mean |        min |        max |   n |
+|:-------------------|-----------:|-----------:|-----------:|----:|
+| Length (m)         | 65.1796667 | 21.0700000 | 138.280000 | 120 |
+| Width (m)          | 33.9691753 |  3.3200000 |  76.210000 | 120 |
+| Width:length ratio |  0.5820743 |  0.0608661 |   2.761843 | 120 |
+| lanes              |  3.9459459 |  0.0000000 |   8.000000 | 120 |
 
 ``` r
 plot.dat%>%
-  group_by(Continent, name) %>%
+  group_by(continent, name) %>%
   summarise(mean = mean(value, na.rm = TRUE),
             min = min(value, na.rm = TRUE),
             max = max(value, na.rm = TRUE),
@@ -320,16 +325,16 @@ plot.dat%>%
   kable
 ```
 
-| Continent                 | name               |       mean |        min |        max |  n |
-| :------------------------ | :----------------- | ---------: | ---------: | ---------: | -: |
-| Europe, Asia, and Oceania | Length (m)         | 74.0752381 | 23.2200000 | 138.280000 | 65 |
-| Europe, Asia, and Oceania | Width (m)          | 46.0780645 | 10.6400000 | 122.440000 | 65 |
-| Europe, Asia, and Oceania | Width:length ratio |  0.7218264 |  0.1354706 |   2.761843 | 65 |
-| Europe, Asia, and Oceania | lanes              |  4.3620690 |  0.0000000 |   9.000000 | 65 |
-| North America             | Length (m)         | 62.9456522 | 34.1500000 | 109.290000 | 27 |
-| North America             | Width (m)          | 31.3060870 |  5.6000000 |  60.070000 | 27 |
-| North America             | Width:length ratio |  0.5238982 |  0.0886497 |   1.101943 | 27 |
-| North America             | lanes              |  3.8095238 |  2.0000000 |   8.000000 | 27 |
+| continent                 | name               |       mean |        min |        max |   n |
+|:--------------------------|:-------------------|-----------:|-----------:|-----------:|----:|
+| Europe, Asia, and Oceania | Length (m)         | 66.6034921 | 21.0700000 | 138.280000 |  91 |
+| Europe, Asia, and Oceania | Width (m)          | 34.2773913 |  3.3200000 |  76.210000 |  91 |
+| Europe, Asia, and Oceania | Width:length ratio |  0.6024552 |  0.0608661 |   2.761843 |  91 |
+| Europe, Asia, and Oceania | lanes              |  4.0121951 |  0.0000000 |   8.000000 |  91 |
+| North America             | Length (m)         | 61.8574074 | 29.1200000 | 109.290000 |  29 |
+| North America             | Width (m)          | 33.2096429 |  5.6000000 |  64.970000 |  29 |
+| North America             | Width:length ratio |  0.5345191 |  0.0886497 |   1.101943 |  29 |
+| North America             | lanes              |  3.7586207 |  2.0000000 |   8.000000 |  29 |
 
 ``` r
 op%>%
@@ -337,35 +342,42 @@ op%>%
   mutate(period=case_when(year<2010~"before",
                           year>=2010~"after"))%>%
   group_by(period) %>%
-  summarise(W = mean(`Width (m)`, na.rm = TRUE),
-            L=mean(`Length (m)`, na.rm = TRUE),
+  summarise(W = mean(width, na.rm = TRUE),
+            L=mean(length, na.rm = TRUE),
             n=n())%>%
   kable
 ```
 
-| period |        W |        L |  n |
-| :----- | -------: | -------: | -: |
-| after  | 41.04158 | 62.73421 | 21 |
-| before | 43.29647 | 65.90222 | 19 |
+| period |        W |        L |   n |
+|:-------|---------:|---------:|----:|
+| after  | 32.73833 | 57.81552 |  35 |
+| before | 31.09857 | 60.83682 |  44 |
 
 ## Effectiveness
 
 ``` r
-eff <- eff%>%
-    rename(`Width (m)`=`Estimated inner Width (m) ( from Google Earth)(in cases where fencing is visible - inner fence/rail where visible)`,
-         `Length (m)`=`Estimated Length (m) ( Headwall)(end to end of physical structure, often indicated by start and stop of guard rail / concreate/metail edge of strcuture)`,
-         `W:L ratio`=`W:L ratio GE`)%>%
+eff <- eff.raw%>%
+    rename(`Width (m)`=estimated_inner_width_m_from_google_earth_in_cases_where_fencing_is_visible_inner_fence_rail_where_visible,
+         `Length (m)`=estimated_length_m_headwall_end_to_end_of_physical_structure_often_indicated_by_start_and_stop_of_guard_rail_concreate_metail_edge_of_strcuture,
+         )%>%
   mutate(`Length (m)`=as.numeric(`Length (m)`),
-         `Width (m)`=as.numeric(`Width (m)`))
+         `Width (m)`=as.numeric(`Width (m)`),
+         `W:L ratio`=`Width (m)`/`Length (m)`)%>%
+  dplyr::select(crossing=name_if_applicable,`Width (m)`,`W:L ratio`,days=approximate_number_of_monitoring_days, total:coyote)%>%
+  pivot_longer(total:coyote)%>%
+  mutate(rate=(value/days)*30,
+         name=str_replace_all(name,"_"," "))
   
+###plot
 eff%>%
-  dplyr::select(`Name (if applicable)`, Total, `Width (m)`,`W:L ratio`)%>%
+  filter(name%in%"total")%>%
+  dplyr::select(crossing, rate, `Width (m)`,`W:L ratio`)%>%
   pivot_longer(`Width (m)`:`W:L ratio`)%>%
-  ggplot(aes(y=Total, x=value, fill=name))+
+  ggplot(aes(y=rate, x=value, fill=name))+
     geom_point()+
     facet_wrap(vars(name), scales="free_x")+
   theme_ipsum()+
-  geom_smooth(method="lm",se=FALSE)+
+  geom_smooth(method="lm",se=FALSE, color="black", linetype="dashed")+
      theme(axis.title.x = element_text(size=17),
           axis.title.y = element_text(size=17),
           axis.text.x = element_text(size=17),
@@ -373,7 +385,7 @@ eff%>%
           plot.title = element_text(size=22),
           plot.subtitle = element_text(size=17),
           legend.position = "none")+
-  labs(title="Overpass dimensions",y="",x="")
+  labs(title="Overpass dimensions",y="Crossings per month",x="")
 ```
 
 ![](README_files/figure-gfm/Effectiveness-1.png)<!-- -->
@@ -381,13 +393,16 @@ eff%>%
 ``` r
 ggsave(here::here("output", "op_dims_effectiveness.png"), height=5, width=7, unit="in",bg="white")
 
-library(tidymodels)
+
+###Stats
+##total
 eff%>%
-  dplyr::select(`Name (if applicable)`, Total, `Width (m)`,`W:L ratio`)%>%
+  filter(name%in%"total")%>%
+  dplyr::select(crossing, rate, `Width (m)`,`W:L ratio`)%>%
   pivot_longer(`Width (m)`:`W:L ratio`)%>%
   nest(data = c(-name))%>% 
   mutate(
-    fit = map(data, ~ lm(Total ~ value, data = .x)),
+    fit = map(data, ~ lm(rate ~ value, data = .x)),
     tidied = map(fit, tidy)
   ) %>% 
   unnest(tidied) %>% 
@@ -398,66 +413,148 @@ eff%>%
 ```
 
 | name      | term  | estimate | std.error | statistic | p.value |
-| :-------- | :---- | -------: | --------: | --------: | ------: |
-| Width (m) | value |  0.01856 |   0.01599 |   1.16083 | 0.28376 |
-| W:L ratio | value |  0.92027 |   1.23944 |   0.74249 | 0.48195 |
+|:----------|:------|---------:|----------:|----------:|--------:|
+| Width (m) | value |  0.40561 |   0.41584 |   0.97538 | 0.35237 |
+| W:L ratio | value | 34.89408 |  29.11922 |   1.19832 | 0.25842 |
 
 ``` r
+##summarise total across lengths
 eff%>%
-  dplyr::select(`Name (if applicable)`, Total, `Width (m)`)%>%
+  dplyr::select(crossing, rate, `Width (m)`)%>%
   mutate(width.bin=case_when(`Width (m)`<=40~"<=40",
                              `Width (m)`>40~">40"))%>%
   drop_na(width.bin)%>%
-   lm(Total ~ width.bin, data=.)%>%
+   lm(rate ~ width.bin, data=.)%>%
   tidy%>%
   kable
 ```
 
-| term          |  estimate | std.error | statistic |   p.value |
-| :------------ | --------: | --------: | --------: | --------: |
-| (Intercept)   | 0.3556911 | 0.6120751 | 0.5811232 | 0.5793793 |
-| width.bin\>40 | 1.1295341 | 0.7496359 | 1.5067770 | 0.1755946 |
+| term          | estimate | std.error | statistic |   p.value |
+|:--------------|---------:|----------:|----------:|----------:|
+| (Intercept)   | 4.243902 |  3.155719 |  1.344829 | 0.1814219 |
+| width.bin\>40 | 6.111783 |  3.926233 |  1.556653 | 0.1223996 |
 
 ``` r
 eff%>%
-  dplyr::select(`Name (if applicable)`, Total, `Width (m)`=`Known Width (m)`,`W:L ratio`=`W:L ratio known values`)%>%
-  pivot_longer(`Width (m)`:`W:L ratio`)%>%
+  dplyr::select(crossing, rate, `Width (m)`)%>%
+  mutate(width.bin=case_when(`Width (m)`<=40~"<=40",
+                             `Width (m)`>40~">40"))%>%
+  drop_na(width.bin)%>%
+  group_by(width.bin)%>%
+  summarise(mean=mean(rate, na.rm=TRUE),
+            se=sd(rate, na.rm=TRUE)/sqrt(n()))
+
+##by species
+
+eff%>%
+  filter(!name%in%"total")%>%
+  dplyr::select(crossing, rate, `Width (m)`,name)%>%
+  ggplot(aes(y=rate, x=`Width (m)`, fill=name))+
+    geom_point()+
+    facet_wrap(vars(name), scales="free_y")+
+  theme_ipsum()+
+  geom_smooth(method="lm",se=FALSE, color="black", linetype="dashed")+
+     theme(axis.title.x = element_text(size=17),
+          axis.title.y = element_text(size=17),
+          axis.text.x = element_text(size=17),
+          axis.text.y = element_text(size=13),
+          plot.title = element_text(size=22),
+          plot.subtitle = element_text(size=17),
+          legend.position = "none")+
+  labs(title="Overpass dimensions",y="Crossings per day",x="")
+```
+
+![](README_files/figure-gfm/Effectiveness-2.png)<!-- -->
+
+``` r
+ggsave(here::here("output", "op_dims_effectiveness_byspecies.png"), height=8, width=10, unit="in",bg="white")
+
+
+##length
+eff%>%
+  filter(!name%in%"total")%>%
+  dplyr::select(crossing, rate,name, `Width (m)`)%>%
   nest(data = c(-name))%>% 
   mutate(
-    fit = map(data, ~ lm(Total ~ value, data = .x)),
+    fit = map(data, ~ lm(rate ~ `Width (m)`, data = .x)),
     tidied = map(fit, tidy)
   ) %>% 
   unnest(tidied) %>% 
   dplyr::select(-data, -fit)%>%
-  filter(term=="value")%>%
+  filter(term!="(Intercept)")%>%
   mutate_if(is.numeric, round, 5)%>%
   kable
 ```
 
-| name      | term  | estimate | std.error | statistic | p.value |
-| :-------- | :---- | -------: | --------: | --------: | ------: |
-| Width (m) | value |  0.01408 |   0.01345 |   1.04663 | 0.31991 |
-| W:L ratio | value |  0.78261 |   0.86895 |   0.90064 | 0.38896 |
+| name             | term        | estimate | std.error | statistic | p.value |
+|:-----------------|:------------|---------:|----------:|----------:|--------:|
+| deer             | `Width (m)` |  0.37978 |   0.40036 |   0.94860 | 0.36518 |
+| elk              | `Width (m)` |  0.06638 |   0.12768 |   0.51993 | 0.61443 |
+| moose            | `Width (m)` |  0.00233 |   0.00578 |   0.40237 | 0.69680 |
+| black bear       | `Width (m)` |  0.00666 |   0.00274 |   2.43047 | 0.03542 |
+| grizzly bear     | `Width (m)` |  0.02548 |   0.00863 |   2.95242 | 0.01836 |
+| cougar           | `Width (m)` | -0.02208 |   0.01655 |  -1.33423 | 0.21172 |
+| big horned sheep | `Width (m)` | -0.06020 |   0.04808 |  -1.25220 | 0.24586 |
+| wolf             | `Width (m)` |  0.01280 |   0.01918 |   0.66735 | 0.52333 |
+| coyote           | `Width (m)` |  0.00560 |   0.02962 |   0.18894 | 0.85392 |
 
 ``` r
+##summarise  across lengths
 eff%>%
-  mutate(`Width (m)`=case_when(is.na(`Width (m)`)~`Known Width (m)`, TRUE~`Width (m)`),
-         `W:L ratio`=case_when(is.na(`W:L ratio`)~`W:L ratio known values`, TRUE~`W:L ratio`))%>%
-  dplyr::select(`Name (if applicable)`, Total, `Width (m)`,`W:L ratio`)%>%
-  pivot_longer(`Width (m)`:`W:L ratio`)%>%
+  filter(!name%in%"total")%>%
+  dplyr::select(crossing, rate,name,name, `Width (m)`)%>%
+  mutate(width.bin=case_when(`Width (m)`<=40~"<=40",
+                             `Width (m)`>40~">40"))%>%
+  drop_na(width.bin)%>%
   nest(data = c(-name))%>% 
   mutate(
-    fit = map(data, ~ lm(Total ~ value, data = .x)),
+    fit = map(data, ~ lm(rate ~ width.bin, data = .x)),
     tidied = map(fit, tidy)
   ) %>% 
   unnest(tidied) %>% 
   dplyr::select(-data, -fit)%>%
-  filter(term=="value")%>%
+  filter(term!="(Intercept)")%>%
   mutate_if(is.numeric, round, 5)%>%
   kable
 ```
 
-| name      | term  | estimate | std.error | statistic | p.value |
-| :-------- | :---- | -------: | --------: | --------: | ------: |
-| Width (m) | value |  0.01340 |   0.01366 |   0.98089 | 0.34978 |
-| W:L ratio | value |  0.90166 |   1.00662 |   0.89573 | 0.39145 |
+| name             | term          | estimate | std.error | statistic | p.value |
+|:-----------------|:--------------|---------:|----------:|----------:|--------:|
+| deer             | width.bin\>40 | 21.93395 |  19.13549 |   1.14624 | 0.27838 |
+| elk              | width.bin\>40 |  5.42005 |   6.06313 |   0.89394 | 0.39236 |
+| moose            | width.bin\>40 |  0.15712 |   0.28483 |   0.55163 | 0.59463 |
+| black bear       | width.bin\>40 |  0.30255 |   0.13845 |   2.18527 | 0.05376 |
+| grizzly bear     | width.bin\>40 |  1.37041 |   0.38717 |   3.53958 | 0.00762 |
+| cougar           | width.bin\>40 | -1.07488 |   0.80592 |  -1.33373 | 0.21187 |
+| big horned sheep | width.bin\>40 | -3.01829 |   2.38617 |  -1.26491 | 0.24150 |
+| wolf             | width.bin\>40 |  0.92302 |   0.92354 |   0.99944 | 0.34685 |
+| coyote           | width.bin\>40 |  0.79029 |   1.42315 |   0.55531 | 0.59089 |
+
+``` r
+##Width:length
+eff%>%
+  filter(!name%in%"total")%>%
+  dplyr::select(crossing, rate,name, `W:L ratio`)%>%
+  nest(data = c(-name))%>% 
+  mutate(
+    fit = map(data, ~ lm(rate ~ `W:L ratio`, data = .x)),
+    tidied = map(fit, tidy)
+  ) %>% 
+  unnest(tidied) %>% 
+  dplyr::select(-data, -fit)%>%
+  filter(term!="(Intercept)")%>%
+  mutate_if(is.numeric, round, 5)%>%
+  kable
+```
+
+| name             | term        | estimate | std.error | statistic | p.value |
+|:-----------------|:------------|---------:|----------:|----------:|--------:|
+| deer             | `W:L ratio` | 38.80397 |  27.27650 |   1.42262 | 0.18528 |
+| elk              | `W:L ratio` | -1.81429 |   9.24103 |  -0.19633 | 0.84828 |
+| moose            | `W:L ratio` |  0.13985 |   0.41634 |   0.33589 | 0.74465 |
+| black bear       | `W:L ratio` |  0.52422 |   0.18352 |   2.85653 | 0.01706 |
+| grizzly bear     | `W:L ratio` |  2.01881 |   0.54434 |   3.70875 | 0.00597 |
+| cougar           | `W:L ratio` | -1.19641 |   1.22837 |  -0.97398 | 0.35304 |
+| big horned sheep | `W:L ratio` | -3.72162 |   3.54701 |  -1.04923 | 0.32473 |
+| wolf             | `W:L ratio` |  1.46147 |   1.32013 |   1.10706 | 0.30044 |
+| coyote           | `W:L ratio` | -1.02972 |   2.09817 |  -0.49077 | 0.63418 |
