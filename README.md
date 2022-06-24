@@ -1,7 +1,7 @@
 Wildlife Overpass Review
 ================
 Clayton Lamb, Liam Brennan, Emily Chow
-23 June, 2022
+24 June, 2022
 
 ## Load Data
 
@@ -472,7 +472,7 @@ ggsave(here::here("output", "op_dims_effectiveness_byspecies.png"), height=8, wi
 
 
 ##length
-eff%>%
+length.by.sp <- eff%>%
   filter(!name%in%"total")%>%
   dplyr::select(crossing, rate,name, `Width (m)`)%>%
   nest(data = c(-name))%>% 
@@ -485,18 +485,40 @@ eff%>%
   filter(term!="(Intercept)")%>%
   mutate_if(is.numeric, round, 5)%>%
   kable
+
+
+
+eff%>%
+  filter(!name%in%"total")%>%
+  dplyr::select(crossing, rate,name, `Width (m)`)%>%
+  group_by(name)%>%
+  mutate(rate_scale=scale(rate))%>%
+  ungroup%>%
+  nest(data = c(-name))%>% 
+  mutate(
+    fit = map(data, ~ lm(rate_scale ~ `Width (m)`, data = .x)),
+    tidied = map(fit, tidy)
+  ) %>% 
+  unnest(tidied) %>% 
+  dplyr::select(-data, -fit)%>%
+  filter(term!="(Intercept)")%>%
+  mutate_if(is.numeric, round, 5)%>%
+  ggplot(aes(x=estimate, xmin=estimate-std.error,xmax=estimate+std.error,y=name))+
+  geom_point()+
+  geom_linerange()+
+  theme_ipsum()+
+  geom_vline(xintercept=0, linetype="dashed")+
+       theme(axis.title.x = element_text(size=17),
+          axis.title.y = element_text(size=17),
+          axis.text.x = element_text(size=17),
+          axis.text.y = element_text(size=13),
+          plot.title = element_text(size=22),
+          plot.subtitle = element_text(size=17),
+          legend.position = "none")+
+  labs(title="",y="Species",x="Effect of width on crossings (standardized)")
 ```
 
-| name         | term        | estimate | std.error | statistic | p.value |
-|:-------------|:------------|---------:|----------:|----------:|--------:|
-| deer         | `Width (m)` |  0.37978 |   0.40036 |   0.94860 | 0.36518 |
-| elk          | `Width (m)` |  0.06638 |   0.12768 |   0.51993 | 0.61443 |
-| moose        | `Width (m)` |  0.00233 |   0.00578 |   0.40237 | 0.69680 |
-| black bear   | `Width (m)` |  0.00666 |   0.00274 |   2.43047 | 0.03542 |
-| grizzly bear | `Width (m)` |  0.02514 |   0.01014 |   2.48024 | 0.04220 |
-| cougar       | `Width (m)` | -0.02208 |   0.01655 |  -1.33423 | 0.21172 |
-| wolf         | `Width (m)` |  0.01280 |   0.01918 |   0.66735 | 0.52333 |
-| coyote       | `Width (m)` |  0.00560 |   0.02962 |   0.18894 | 0.85392 |
+![](README_files/figure-gfm/Effectiveness-3.png)<!-- -->
 
 ``` r
 ##summarise  across lengths
